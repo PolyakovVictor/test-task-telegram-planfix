@@ -12,6 +12,7 @@ app = Flask(__name__)
 load_dotenv()
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
+bot_token = os.getenv("BOT_TOKEN")
 session_folder = 'sessions'
 if not os.path.exists(session_folder):
     os.makedirs(session_folder)
@@ -22,16 +23,15 @@ async def start_telegram_client():
     # Отримуємо дані для запуску клієнта
     data = request.json
     session_token = uuid4()
-    print(session_token)
 
     # create telegram client
     client = TelegramClient(
         f"{session_folder}/session_{session_token}",
         api_id,
-        api_hash
+        api_hash,
     )
 
-    await client.start()
+    await client.start(bot_token=bot_token)
 
     # check status
     status = "online" if client.is_connected() else "offline"
@@ -39,10 +39,10 @@ async def start_telegram_client():
 
     session_path = f"{session_folder}/session_{session_token}.session"
     if client.is_connected():
-        session_string = client.StringSession.save()
+        session_string = StringSession.save(client.session)
         if session_string:
             with open(session_path, "wb") as file:
-                file.write(session_string)
+                file.write(session_string.encode('utf-8'))
         else:
             return jsonify({"error": "Session string is empty"}), 500
     else:
