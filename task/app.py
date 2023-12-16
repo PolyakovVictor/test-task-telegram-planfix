@@ -13,43 +13,59 @@ load_dotenv()
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
 bot_token = os.getenv("BOT_TOKEN")
-session_folder = 'sessions'
-if not os.path.exists(session_folder):
-    os.makedirs(session_folder)
+
+path_session = 'sessions'
+name_session = 'session'
+
+
+async def check_path_exist(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 
 @app.route("/start", methods=["POST"])
 async def start_telegram_client():
-    # Отримуємо дані для запуску клієнта
     data = request.json
+
+    name = data.get("name")
+    number = data.get("number")
+    # name_session = data.get("name_session")
+    # path_session = data.get("path_session")
+
     session_token = uuid4()
 
-    # create telegram client
+    # if not all([name_session, path_session]):
+    #     path_session = 'sessions'
+    #     name_session = f"session_{session_token}.session"
+    #     await check_path_exist(path_session)
+
+    await check_path_exist(path_session)
+
     client = TelegramClient(
-        f"{session_folder}/session_{session_token}",
+        f"{path_session}/{name_session}_{session_token}",
         api_id,
         api_hash,
     )
 
     await client.start(bot_token=bot_token)
 
-    # check status
     status = "online" if client.is_connected() else "offline"
-    print(status)
 
-    session_path = f"{session_folder}/session_{session_token}.session"
+    session_path = f"{path_session}/{name_session}_{session_token}.session"
     if client.is_connected():
         session_string = StringSession.save(client.session)
         if session_string:
             with open(session_path, "wb") as file:
                 file.write(session_string.encode('utf-8'))
+                # Save name and number along with the session
+                file.write(f"\nName: {name}\nNumber: {number}".encode('utf-8'))
         else:
             return jsonify({"error": "Session string is empty"}), 500
     else:
         return jsonify({"error": "Client is not connected"}), 500
 
     return {
-        "name": data["name"],
+        "name": name,
         "status": status,
         "token": session_token,
     }
@@ -62,11 +78,11 @@ async def get_telegram_session_status():
     if not session_token:
         return "Token not provided", 401
 
-    if not os.path.exists(f"{session_folder}/session_{session_token}.session"):
+    if not os.path.exists(f"sessions/session_{session_token}.session"):
         return "Session not found", 404
 
     client = TelegramClient(
-        f"{session_folder}/session_{session_token}",
+        f"{path_session}/{name_session}_{session_token}",
         api_id,
         api_hash
     )
@@ -92,11 +108,11 @@ async def stop_telegram_client():
     if not session_token:
         return "Token not required", 401
 
-    if not os.path.exists(f"{session_folder}/session_{session_token}.session"):
+    if not os.path.exists(f"{path_session}/session_{session_token}.session"):
         return "Session not found", 404
 
     client = TelegramClient(
-        f"{session_folder}/session_{session_token}",
+        f"{path_session}/session_{session_token}",
         api_id,
         api_hash
     )
@@ -107,7 +123,7 @@ async def stop_telegram_client():
         return "Client is already disconnected", 400
 
     await client.disconnect()
-    os.remove(f"{session_folder}/session_{session_token}.session")
+    os.remove(f"{path_session}/session_{session_token}.session")
 
     return "Ok"
 
