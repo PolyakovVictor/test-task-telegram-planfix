@@ -7,6 +7,7 @@ import os
 from uuid import uuid4
 from telethon.sessions import StringSession
 from flask_sqlalchemy import SQLAlchemy
+import asyncio
 
 
 app = Flask(__name__)
@@ -97,34 +98,33 @@ async def start_telegram_client():
     }
 
 
-@app.route("/start", methods=["GET"])
-async def get_telegram_session_status():
-    session_token = request.headers.get("Token")
+@app.route("/status", methods=["GET"])
+async def get_status():
+    token = request.headers.get("Token")
 
-    if not session_token:
-        return "Token not provided", 401
+    if not token:
+        return jsonify({"error": "Token is missing"}), 400
 
-    if not os.path.exists(f"sessions/session_{session_token}.session"):
-        return "Session not found", 404
+    session = TelegramSession.query.filter_by(session_token=token).first()
 
-    client = TelegramClient(
-        f"{path_session}/{name_session}_{session_token}",
-        api_id,
-        api_hash
-    )
+    if not session:
+        return jsonify({"error": "Invalid token"}), 400
 
-    await client.connect()
+    path = os.path.join(session.path_session, f"{session.name_session}_{token}")
 
-    if client.is_connected():
-        status = "online"
-    else:
+    client = TelegramClient(path, api_id, api_hash)
+    try:
+        await client.start()
+        if client.is_connected():
+            status = "online"
+        else:
+            status = "offline"
+    except:
         status = "offline"
 
-    await client.disconnect()
-
-    return {
+    return jsonify({
         "status": status
-    }
+    })
 
 
 @app.route("/start", methods=["DELETE"])
