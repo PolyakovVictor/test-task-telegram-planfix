@@ -6,16 +6,36 @@ from telethon.errors import SessionPasswordNeededError
 import os
 from uuid import uuid4
 from telethon.sessions import StringSession
+from flask_sqlalchemy import SQLAlchemy
 
 
 app = Flask(__name__)
 load_dotenv()
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///bd.sqlite3'
+db = SQLAlchemy(app)
+
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
 bot_token = os.getenv("BOT_TOKEN")
 
 path_session = 'sessions'
 name_session = 'session'
+
+
+class TelegramSession(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50))
+    number = db.Column(db.String(15))
+    url_planfix = db.Column(db.String(100))
+    token_planfix = db.Column(db.String(100))
+    name_session = db.Column(db.String(50))
+    path_session = db.Column(db.String(100))
+    session_token = db.Column(db.Text)
+
+
+with app.app_context():
+    db.create_all()
 
 
 async def check_path_exist(path):
@@ -29,15 +49,26 @@ async def start_telegram_client():
 
     name = data.get("name")
     number = data.get("number")
-    # name_session = data.get("name_session")
-    # path_session = data.get("path_session")
+    url_planfix = data.get("url_planfix")
+    token_planfix = data.get("token_planfix")
+    name_session = data.get("name_session")
+    path_session = data.get("path_session")
 
-    session_token = uuid4()
+    if not all((name_session, path_session)):
+        name_session = 'session'
+        path_session = 'sessions'
 
-    # if not all([name_session, path_session]):
-    #     path_session = 'sessions'
-    #     name_session = f"session_{session_token}.session"
-    #     await check_path_exist(path_session)
+    session_token = str(uuid4())
+
+    session_data = TelegramSession(
+        name=name,
+        number=number,
+        url_planfix=url_planfix,
+        token_planfix=token_planfix,
+        name_session=name_session,
+        path_session=path_session,
+        session_token=session_token
+    )
 
     await check_path_exist(path_session)
 
@@ -51,16 +82,11 @@ async def start_telegram_client():
 
     status = "online" if client.is_connected() else "offline"
 
-    session_path = f"{path_session}/{name_session}_{session_token}.session"
     if client.is_connected():
-        session_string = StringSession.save(client.session)
-        if session_string:
-            with open(session_path, "wb") as file:
-                file.write(session_string.encode('utf-8'))
-                # Save name and number along with the session
-                file.write(f"\nName: {name}\nNumber: {number}".encode('utf-8'))
-        else:
-            return jsonify({"error": "Session string is empty"}), 500
+        client.session.save()
+        with app.app_context():  # Creating the app context
+            db.session.add(session_data)
+            db.session.commit()
     else:
         return jsonify({"error": "Client is not connected"}), 500
 
