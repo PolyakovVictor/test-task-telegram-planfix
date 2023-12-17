@@ -7,18 +7,19 @@ import os
 from uuid import uuid4
 from telethon.sessions import StringSession
 from flask_sqlalchemy import SQLAlchemy
-import asyncio
 
 
 app = Flask(__name__)
 load_dotenv()
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///bd.sqlite3'
-db = SQLAlchemy(app)
-
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
 bot_token = os.getenv("BOT_TOKEN")
+db_link = os.getenv("DB_LINK")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_link
+db = SQLAlchemy(app)
+
 
 path_session = 'sessions'
 name_session = 'session'
@@ -100,19 +101,20 @@ async def start_telegram_client():
 
 @app.route("/status", methods=["GET"])
 async def get_status():
-    token = request.headers.get("Token")
+    session_token = request.headers.get("Token")
 
-    if not token:
+    if not session_token:
         return jsonify({"error": "Token is missing"}), 400
 
-    session = TelegramSession.query.filter_by(session_token=token).first()
+    session = TelegramSession.query.filter_by(session_token=session_token).first()
 
     if not session:
         return jsonify({"error": "Invalid token"}), 400
 
-    path = os.path.join(session.path_session, f"{session.name_session}_{token}")
+    path = os.path.join(session.path_session, f"{session.name_session}_{session_token}")
 
     client = TelegramClient(path, api_id, api_hash)
+    print(client.is_connected())
     try:
         await client.start()
         if client.is_connected():
@@ -127,31 +129,36 @@ async def get_status():
     })
 
 
-@app.route("/start", methods=["DELETE"])
+@app.route("/stop", methods=["DELETE"])
 async def stop_telegram_client():
     session_token = request.headers.get("Token")
 
     if not session_token:
-        return "Token not required", 401
+        return jsonify({"error": "Token is missing"}), 400
 
-    if not os.path.exists(f"{path_session}/session_{session_token}.session"):
-        return "Session not found", 404
+    # Using the same session throughout
+    session = db.session
 
-    client = TelegramClient(
-        f"{path_session}/session_{session_token}",
-        api_id,
-        api_hash
-    )
+    obj = session.query(TelegramSession).filter_by(session_token=session_token).first()
+    path = f"{obj.path_session}/{obj.name_session}_{session_token}.session"
 
-    await client.connect()
+    if not obj:
+        return jsonify({"error": "Invalid token"}), 400
 
-    if not client.is_connected():
-        return "Client is already disconnected", 400
+    if os.path.exists(path):  # Check if the file exists before attempting deletion
+        try:
+            os.remove(path)
+        except Exception as e:
+            return jsonify({"error": f"Failed to delete file: {str(e)}"}), 500
+    else:
+        return jsonify({"error": "File does not exist"}), 404
 
-    await client.disconnect()
-    os.remove(f"{path_session}/session_{session_token}.session")
+    with app.app_context():
+        obj = session.merge(obj)
+        session.delete(obj)
+        session.commit()
 
-    return "Ok"
+    return jsonify({"status": "offline"})
 
 if __name__ == "__main__":
     app.run()
