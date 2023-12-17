@@ -111,6 +111,8 @@ async def get_status():
 
     session = TelegramSession.query.filter_by(session_token=session_token).first()
 
+    print(session.__dict__)
+
     if not session:
         return jsonify({"error": "Invalid token"}), 400
 
@@ -161,6 +163,35 @@ async def stop_telegram_client():
 
     return jsonify({"status": "offline"})
 
+
+@app.route("/update", methods=["PUT"])
+async def update_client():
+    session_token = request.headers.get("Token")
+    data = request.json
+
+    if not session_token:
+        return jsonify({"error": "Missing session token"}), 400
+
+    session = TelegramSession.query.filter_by(session_token=session_token).first()
+
+    if not session:
+        return jsonify({"error": "Invalid session token"}), 404
+
+    if data.get("name"):
+        session.name = data.get("name")
+    if data.get("number"):
+        session.number = data.get("number")
+    if data.get("url_planfix"):
+        session.url_planfix = data.get("url_planfix")
+    if data.get("token_planfix"):
+        session.token_planfix = data.get("token_planfix")
+
+    db.session.add(session)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Client updated successfully",
+    })
 
 if __name__ == "__main__":
     app.run(debug=True)
