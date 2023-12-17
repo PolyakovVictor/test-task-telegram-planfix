@@ -13,7 +13,7 @@ load_dotenv()
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
 bot_token = os.getenv("BOT_TOKEN")
-phone = 380665610258
+
 session_folder = 'test_sessions'
 if not os.path.exists(session_folder):
     os.makedirs(session_folder)
