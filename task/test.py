@@ -28,7 +28,7 @@ async def first_connect():
     client = TelegramClient(session_name, api_id, api_hash)
     await client.start()
 
-    phone = '+79211234567'
+    phone = '+49211234567'
     code = input('Введите код подтверждения: ')
     await client.auth(phone, code)
 
