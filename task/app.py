@@ -80,12 +80,15 @@ async def start_telegram_client():
         api_hash,
     )
 
-    await client.start(bot_token=bot_token)
+    try:
+        await client.start(bot_token=bot_token)
+    except Exception as e:
+        print(f'Error: {e}')
 
     status = "online" if client.is_connected() else "offline"
 
     if client.is_connected():
-        client.session.save()
+        client.disconnect()
         with app.app_context():  # Creating the app context
             db.session.add(session_data)
             db.session.commit()
@@ -111,19 +114,17 @@ async def get_status():
     if not session:
         return jsonify({"error": "Invalid token"}), 400
 
-    path = os.path.join(session.path_session, f"{session.name_session}_{session_token}")
+    path = os.path.join(session.path_session, f"{session.name_session}_{session_token}.session")
 
     client = TelegramClient(path, api_id, api_hash)
-    print(client.is_connected())
-    try:
-        await client.start()
-        if client.is_connected():
-            status = "online"
-        else:
-            status = "offline"
-    except:
-        status = "offline"
 
+    try:
+        await client.connect()
+        status = "online" if client.is_connected() else "offline"
+    except Exception as e:
+        print(f'Error: {e}')
+    finally:
+        await client.disconnect()
     return jsonify({
         "status": status
     })
@@ -160,5 +161,6 @@ async def stop_telegram_client():
 
     return jsonify({"status": "offline"})
 
+
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
