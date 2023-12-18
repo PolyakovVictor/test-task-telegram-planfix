@@ -38,10 +38,10 @@ async def first_connect():
 
 
 async def reconnect():
-    client = TelegramClient(f'{session_folder}/session_1e14c235-55b2-4e73-b070-edfb2b2a4371', api_id, api_hash)
+    client = TelegramClient('sessions/session_4c00f5e8-9872-4cac-9cdf-d28a11a873e1', api_id, api_hash)
     try:
         await client.connect()
-        user = await client.get_input_entity('@daste21')
+        user = await client.get_input_entity('daste21')
         await client.send_message(user, 'test message2')
     except Exception as e:
         print(f'Error: {e}')

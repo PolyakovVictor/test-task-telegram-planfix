@@ -193,5 +193,29 @@ async def update_client():
         "message": "Client updated successfully",
     })
 
+
+@app.route("/send_message", methods=["POST"])
+async def send_message():
+    data = request.json
+
+    session_token = request.headers.get("Token")
+    obj = TelegramSession.query.filter_by(session_token=session_token).first()
+    print(obj.__dict__)
+    path = f"{obj.path_session}/{obj.name_session}_{session_token}.session"
+    client = TelegramClient(path, api_id, api_hash)
+    await client.connect()
+
+    if not client.is_user_authorized():
+        return {"error": "Unauthorized"}, 401
+
+    receiver = await client.get_input_entity(data.get("telegramUserName"))
+    message = data.get("message")
+
+    await client.send_message(receiver, message)
+
+    await client.disconnect()
+
+    return {"status": "ok"}
+
 if __name__ == "__main__":
     app.run(debug=True)
