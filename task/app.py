@@ -1,12 +1,15 @@
+import threading
 import telethon
+import os
 from dotenv import load_dotenv
 from telethon import TelegramClient
 from flask import Flask, jsonify, request
 from telethon.errors import SessionPasswordNeededError
-import os
 from uuid import uuid4
 from telethon.sessions import StringSession
 from flask_sqlalchemy import SQLAlchemy
+from telethon import events
+from telegram_handler import TelegramBot
 
 
 app = Flask(__name__)
@@ -73,27 +76,29 @@ async def start_telegram_client():
     )
 
     await check_path_exist(path_session)
-
-    client = TelegramClient(
-        f"{path_session}/{name_session}_{session_token}",
+    path = f"{path_session}/{name_session}_{session_token}"
+    client = await TelegramClient(
+        path,
         api_id,
         api_hash,
-    )
+    ).start(bot_token=bot_token)
+    client.disconnect()
 
     try:
-        await client.start(bot_token=bot_token)
+        bot = await TelegramBot(path)
+        bot.run()
+        bot.send_message(12345, "Привет!")
     except Exception as e:
         print(f'Error: {e}')
 
     status = "online" if client.is_connected() else "offline"
+    print(status)
 
-    if client.is_connected():
-        client.disconnect()
-        with app.app_context():  # Creating the app context
-            db.session.add(session_data)
-            db.session.commit()
-    else:
-        return jsonify({"error": "Client is not connected"}), 500
+    with app.app_context():  # Creating the app context
+        db.session.add(session_data)
+        db.session.commit()
+
+    # await run_telegram_client(path)
 
     return {
         "name": name,
