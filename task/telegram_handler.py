@@ -39,9 +39,8 @@ class TelegramBot:
         await self.client.start()
         await self.client.send_message(chat_id, text)
 
-    async def run(self):
+    async def run_forward(self):
         asyncio.create_task(self.forward_messages())
-        asyncio.create_task(self.send_message('daste21', 'blablabla'))
         await asyncio.Future()
 
 
