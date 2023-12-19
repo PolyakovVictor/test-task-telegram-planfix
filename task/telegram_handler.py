@@ -51,6 +51,6 @@ async def main():
     await bot.run()     # запуск в отдельном потоке
 
     bot2 = TelegramBot("sessions/session_9c1fe40a-611e-4956-b708-e94137842796.session")
-    await bot2.send_message('daste21', 'blablabla')     # вызов с await
+    await bot2.send_message('user', 'blablabla')     # вызов с await
 
 asyncio.run(main())
