@@ -84,12 +84,12 @@ async def start_telegram_client():
     ).start(bot_token=bot_token)
     client.disconnect()
 
-    try:
-        bot = await TelegramBot(path)
-        bot.run()
-        bot.send_message(12345, "Привет!")
-    except Exception as e:
-        print(f'Error: {e}')
+    # try:
+    #     bot = await TelegramBot(path)
+    #     bot.run()
+    #     bot.send_message(12345, "Привет!")
+    # except Exception as e:
+    #     print(f'Error: {e}')
 
     status = "online" if client.is_connected() else "offline"
     print(status)
@@ -205,20 +205,16 @@ async def send_message():
 
     session_token = request.headers.get("Token")
     obj = TelegramSession.query.filter_by(session_token=session_token).first()
-    print(obj.__dict__)
-    path = f"{obj.path_session}/{obj.name_session}_{session_token}.session"
-    client = TelegramClient(path, api_id, api_hash)
-    await client.connect()
 
-    if not client.is_user_authorized():
+    path = f"{obj.path_session}/{obj.name_session}_{session_token}.session"
+    bot = TelegramBot(path)
+    await bot.client.start()
+    await bot.send_message(data.get("telegramUserName"), data.get("message"))
+
+    if not bot.client.is_user_authorized():
         return {"error": "Unauthorized"}, 401
 
-    receiver = await client.get_input_entity(data.get("telegramUserName"))
-    message = data.get("message")
-
-    await client.send_message(receiver, message)
-
-    await client.disconnect()
+    await bot.client.disconnect()
 
     return {"status": "ok"}
 

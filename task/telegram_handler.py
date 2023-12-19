@@ -36,20 +36,20 @@ class TelegramBot:
             print(response.status_code)
 
     async def send_message(self, chat_id, text):
-        await self.client.start()
         await self.client.send_message(chat_id, text)
 
     async def run_forward(self):
-        asyncio.create_task(self.forward_messages())
-        await asyncio.Future()
+        status = "online" if self.client.is_connected() else "offline"
+        print(status)
+        await self.forward_messages()
 
 
-async def main():
 
-    bot = TelegramBot("sessions/session_9c1fe40a-611e-4956-b708-e94137842796.session")
-    await bot.run()     # запуск в отдельном потоке
+# async def main():
 
-    bot2 = TelegramBot("sessions/session_9c1fe40a-611e-4956-b708-e94137842796.session")
-    await bot2.send_message('user', 'blablabla')     # вызов с await
+#     bot = TelegramBot("sessions/session_a62a90cc-1f9e-45de-95dd-fb832bc4f1d4.session")
+#     await bot.client.start()
+#     await bot.run_forward()
+#     await bot.client.run_until_disconnected()
 
-asyncio.run(main())
+# asyncio.run(main())
