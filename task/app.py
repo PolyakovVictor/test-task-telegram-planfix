@@ -84,12 +84,13 @@ async def start_telegram_client():
     ).start(bot_token=bot_token)
     client.disconnect()
 
-    # try:
-    #     bot = await TelegramBot(path)
-    #     bot.run()
-    #     bot.send_message(12345, "Привет!")
-    # except Exception as e:
-    #     print(f'Error: {e}')
+    try:
+        bot = TelegramBot(path)
+        await bot.client.start()
+        await bot.forward_messages()
+        await bot.client.run_until_disconnected()
+    except Exception as e:
+        print(f'Error: {e}')
 
     status = "online" if client.is_connected() else "offline"
     print(status)
