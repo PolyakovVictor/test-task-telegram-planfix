@@ -1,3 +1,4 @@
+import asyncio
 import threading
 import telethon
 import os
@@ -86,9 +87,8 @@ async def start_telegram_client():
 
     try:
         bot = TelegramBot(path)
-        await bot.client.start()
-        await bot.forward_messages()
-        await bot.client.run_until_disconnected()
+        thread = threading.Thread(target=asyncio.run, args=(bot.run_forward(),))
+        thread.start()
     except Exception as e:
         print(f'Error: {e}')
 
@@ -134,7 +134,7 @@ async def get_status():
     finally:
         await client.disconnect()
     return jsonify({
-        "status": status
+        "status": 'status'
     })
 
 

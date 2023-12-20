@@ -27,11 +27,12 @@ class TelegramBot:
         self.api_url = "https://example.com/api" 
         self.client = TelegramClient(session_path, api_id, api_hash)
 
-    async def forward_messages(self):
+    async def forward_messages(self, event):
         @self.client.on(events.NewMessage)
         async def handler(event):
             message = event.raw_text
             print(message)
+            await self.client.send_message('daste21', message)
             response = requests.post(f"{self.api_url}/new_message", json={"message": message})
             print(response.status_code)
 
@@ -40,8 +41,13 @@ class TelegramBot:
 
     async def run_forward(self):
         status = "online" if self.client.is_connected() else "offline"
-        print(status)
-        await self.forward_messages()
+        print('TelegramBot: ', status)
+        self.client.add_event_handler(self.forward_messages)   
+        try:
+            await self.client.start()
+            await self.client.run_until_disconnected()  # Not needed anymore
+        except Exception as e:
+            print(f'Error: {e}')
 
 
 
